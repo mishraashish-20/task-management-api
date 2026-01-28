@@ -1,0 +1,850 @@
+openapi: 3.0.3
+info:
+  title: Task Management API
+  version: 1.0.0
+  description: >
+    REST API for managing tasks with multiple users, roles, file attachments, and email notifications.
+
+    ## Roles & RBAC (Summary)
+    - ADMIN: Full access to users and tasks (CRUD, upload, notify).
+    - MANAGER: Can create tasks only for their team (users where user.managerId == manager.id).
+               Can update/notify/upload only tasks created by them.
+               Can view tasks created by them OR assigned to their team.
+    - USER: Can view tasks assigned to them. Can update only task status for tasks assigned to them.
+            Can upload attachments only for tasks assigned to them.
+
+    ## Auth (JWT)
+    Use JWT Bearer token in header:
+    Authorization: Bearer <token>
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local
+
+tags:
+  - name: Auth
+  - name: Users
+  - name: Tasks
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: string
+
+    HealthResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+          example: true
+
+    Role:
+      type: string
+      enum: [ADMIN, MANAGER, USER]
+
+    TaskStatus:
+      type: string
+      enum: [todo, in-progress, done]
+
+    UserPublic:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: John Doe
+        email:
+          type: string
+          format: email
+          example: john@example.com
+        role:
+          $ref: "#/components/schemas/Role"
+        managerId:
+          type: integer
+          nullable: true
+          example: 2
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+          maxLength: 100
+
+    RegisterResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/UserPublic"
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT access token
+        user:
+          $ref: "#/components/schemas/UserPublic"
+
+    AdminCreateUserRequest:
+      type: object
+      required: [name, email, password, role]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+          maxLength: 100
+        role:
+          $ref: "#/components/schemas/Role"
+        managerId:
+          type: integer
+          nullable: true
+          description: Set managerId to assign this user to a manager's team
+          example: 2
+
+    AdminUpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        role:
+          $ref: "#/components/schemas/Role"
+        managerId:
+          type: integer
+          nullable: true
+          example: 2
+
+    UsersListResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserPublic"
+
+    TaskHistoryItem:
+      type: object
+      properties:
+        action:
+          type: string
+          example: CREATED
+        by:
+          type: integer
+          example: 1
+        at:
+          type: string
+          format: date-time
+        meta:
+          type: object
+          additionalProperties: true
+
+    Task:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: MongoDB ObjectId
+          example: 65b4e8c2a16b4f6d1d5b1234
+        title:
+          type: string
+          example: Prepare weekly report
+        description:
+          type: string
+          example: Report should include sales and support metrics
+        status:
+          $ref: "#/components/schemas/TaskStatus"
+        assignedTo:
+          type: integer
+          description: MySQL User ID
+          example: 5
+        createdBy:
+          type: integer
+          description: MySQL User ID
+          example: 2
+        attachments:
+          type: array
+          items:
+            type: string
+          example:
+            - uploads/tasks/65b4e8c2a16b4f6d1d5b1234/1700000000_file.pdf
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaskHistoryItem"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateTaskRequest:
+      type: object
+      required: [title, assignedTo]
+      properties:
+        title:
+          type: string
+          minLength: 2
+          maxLength: 150
+        description:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/TaskStatus"
+        assignedTo:
+          type: integer
+          description: MySQL User ID
+          example: 5
+
+    UpdateTaskRequest:
+      type: object
+      description: >
+        Admin can update all fields.
+        Manager can update tasks created by them.
+        User can update only "status" for tasks assigned to them.
+      properties:
+        title:
+          type: string
+          minLength: 2
+          maxLength: 150
+        description:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/TaskStatus"
+        assignedTo:
+          type: integer
+          description: MySQL User ID
+          example: 5
+
+    TaskResponse:
+      type: object
+      properties:
+        task:
+          $ref: "#/components/schemas/Task"
+
+    TasksListResponse:
+      type: object
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+
+    DeleteTaskResponse:
+      type: object
+      properties:
+        deleted:
+          type: boolean
+          example: true
+
+    NotifyResponse:
+      type: object
+      properties:
+        notified:
+          type: boolean
+          example: true
+
+paths:
+  /health:
+    get:
+      tags: [Auth]
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /register:
+    post:
+      tags: [Auth]
+      summary: Register new user (creates USER role by default)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /login:
+    post:
+      tags: [Auth]
+      summary: Login and get JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users:
+    get:
+      tags: [Users]
+      summary: List users (Admin only)
+      description: |
+        **RBAC**
+        - ADMIN:  Allowed
+        - MANAGER:  Forbidden
+        - USER:  Forbidden
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsersListResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden (Admin only)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      tags: [Users]
+      summary: Create user (Admin only)
+      description: |
+        **RBAC**
+        - ADMIN:  Allowed
+        - MANAGER:  Forbidden
+        - USER:  Forbidden
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCreateUserRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/UserPublic"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden (Admin only)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/{id}:
+    put:
+      tags: [Users]
+      summary: Update user (Admin only)
+      description: |
+        **RBAC**
+        - ADMIN:  Allowed
+        - MANAGER:  Forbidden
+        - USER:  Forbidden
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 5
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUpdateUserRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: "#/components/schemas/UserPublic"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden (Admin only)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      tags: [Users]
+      summary: Delete (Deactivate) user (Admin only)
+      description: |
+        Soft delete (deactivation): sets user `isActive=false`.
+
+        **RBAC**
+        - ADMIN:  Allowed
+        - MANAGER:  Forbidden
+        - USER:  Forbidden
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            example: 5
+      responses:
+        "200":
+          description: Deactivated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deactivated:
+                    type: boolean
+                    example: true
+        "400":
+          description: Bad request (e.g., cannot deactivate self/last admin)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden (Admin only)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tasks:
+    get:
+      tags: [Tasks]
+      summary: Get tasks (filtered by role)
+      description: |
+        Returns tasks filtered by role.
+
+        **RBAC**
+        - ADMIN:  Sees all tasks
+        - MANAGER:  Sees tasks created by them OR assigned to their team
+        - USER:  Sees tasks assigned to them
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TasksListResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      tags: [Tasks]
+      summary: Create task (Admin/Manager)
+      description: |
+        Create a new task.
+
+        **RBAC**
+        - ADMIN:  Allowed (can assign to any user)
+        - MANAGER:  Allowed (can assign only to users in their team)
+        - USER:  Forbidden
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTaskRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden (role/team rules)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          description: Bad request (e.g., assignedTo not found)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tasks/{id}:
+    put:
+      tags: [Tasks]
+      summary: Update task
+      description: |
+        Update a task.
+
+        **RBAC**
+        - ADMIN:  Can update any task (any fields)
+        - MANAGER:  Can update only tasks created by them (any fields)
+        - USER:  Can update only **status** for tasks assigned to them
+
+        Notes:
+        - If USER tries to update title/description/assignedTo → 403
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            example: 65b4e8c2a16b4f6d1d5b1234
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaskRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden (role rules)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      tags: [Tasks]
+      summary: Delete task (Admin only)
+      description: |
+        Delete a task.
+
+        **RBAC**
+        - ADMIN:  Allowed
+        - MANAGER:  Forbidden
+        - USER:  Forbidden
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            example: 65b4e8c2a16b4f6d1d5b1234
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteTaskResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden (Admin only)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tasks/{id}/upload:
+    post:
+      tags: [Tasks]
+      summary: Upload attachments for a task
+      description: |
+        Upload one or more files using multipart/form-data.
+
+        **RBAC**
+        - ADMIN:  Allowed for any task
+        - MANAGER:  Allowed only for tasks created by them
+        - USER:  Allowed only for tasks assigned to them
+
+        Upload details:
+        - Form key must be: `files`
+        - You can upload up to 10 files in a single request
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            example: 65b4e8c2a16b4f6d1d5b1234
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [files]
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      x-codeSamples:
+        - lang: cURL
+          label: Upload files (cURL)
+          source: |
+            curl -X POST "http://localhost:3000/api/tasks/65b4e8c2a16b4f6d1d5b1234/upload" \
+              -H "Authorization: Bearer <JWT_TOKEN>" \
+              -F "files=@/path/to/file1.pdf" \
+              -F "files=@/path/to/file2.png"
+        - lang: JavaScript
+          label: Upload files (fetch)
+          source: |
+            const form = new FormData();
+            form.append("files", fileInput.files[0]);
+            form.append("files", fileInput.files[1]);
+
+            const res = await fetch("http://localhost:3000/api/tasks/<TASK_ID>/upload", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+              body: form
+            });
+
+            console.log(await res.json());
+      responses:
+        "200":
+          description: Task updated with attachments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden (role rules)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tasks/{id}/notify:
+    post:
+      tags: [Tasks]
+      summary: Send email notification to assigned user
+      description: |
+        Send an email notification to the assigned user.
+
+        **RBAC**
+        - ADMIN: Allowed for any task
+        - MANAGER: Allowed only for tasks created by them
+        - USER:  Forbidden
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            example: 65b4e8c2a16b4f6d1d5b1234
+      responses:
+        "200":
+          description: Email sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotifyResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden (role rules)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"

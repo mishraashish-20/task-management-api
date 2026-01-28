@@ -1,0 +1,72 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: task-mgmt-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: task_mgmt
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mongo:
+    image: mongo:7
+    container_name: task-mgmt-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build: .
+    container_name: task-mgmt-api
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+
+      JWT_SECRET: super-secret
+      JWT_EXPIRES_IN: 1d
+
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DB: task_mgmt
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+
+      MONGO_URI: mongodb://mongo:27017/task_mgmt
+      UPLOAD_DIR: uploads
+
+      SEED_ADMIN: "true"
+      SEED_ADMIN_NAME: Admin
+      SEED_ADMIN_EMAIL: admin@test.com
+      SEED_ADMIN_PASSWORD: Admin@123
+
+      SEED_MANAGER: "true"
+      SEED_MANAGER_NAME: Default Manager
+      SEED_MANAGER_EMAIL: manager@test.com
+      SEED_MANAGER_PASSWORD: Manager@123
+    volumes:
+      - ./uploads:/app/uploads
+
+volumes:
+  mysql_data:
+  mongo_data:
