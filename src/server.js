@@ -2,8 +2,6 @@ import { createApp } from "./app.js";
 import { env } from "./config/env.js";
 import { connectMySQL } from "./db/mysql.js";
 import { connectMongo } from "./db/mongo.js";
-import { User } from "./models/mysql/User.js"; // ensure model is registered
-import { sequelize } from "./db/mysql.js";
 import { seedAdminIfNeeded } from "./services/seed.service.js";
 import { seedManagerIfNeeded } from "./services/seed.service.js";
 import { syncMySQLModels } from "./db/mysql.sync.js";
