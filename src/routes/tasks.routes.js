@@ -1,7 +1,11 @@
 import { Router } from "express";
 import { requireAuth } from "../middlewares/auth.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
-import { createTaskSchema, updateTaskSchema, idParamSchema } from "../validators/tasks.validators.js";
+import {
+  createTaskSchema,
+  updateTaskSchema,
+  idParamSchema,
+} from "../validators/tasks.validators.js";
 import {
   listTasks,
   createTaskHandler,
@@ -23,13 +27,18 @@ tasksRouter.post("/", validate(createTaskSchema), createTaskHandler);
 
 tasksRouter.put("/:id", validate(updateTaskSchema), updateTaskHandler);
 
-tasksRouter.delete("/:id", validate(idParamSchema), allowRoles("ADMIN"), deleteTaskHandler);
+tasksRouter.delete(
+  "/:id",
+  validate(idParamSchema),
+  allowRoles("ADMIN"),
+  deleteTaskHandler,
+);
 
 tasksRouter.post(
   "/:id/upload",
   validate(idParamSchema),
   upload.array("files", 10),
-  uploadTaskAttachments
+  uploadTaskAttachments,
 );
 
 tasksRouter.post("/:id/notify", validate(idParamSchema), notifyAssignee);

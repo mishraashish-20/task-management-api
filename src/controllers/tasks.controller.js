@@ -49,7 +49,11 @@ export const notifyAssignee = asyncHandler(async (req, res) => {
 
   if (req.user.role === "ADMIN") {
   } else if (req.user.role === "MANAGER") {
-    if (task.createdBy !== req.user.id) throw new ApiError(403, "Manager can notify only for tasks created by them");
+    if (task.createdBy !== req.user.id)
+      throw new ApiError(
+        403,
+        "Manager can notify only for tasks created by them",
+      );
   } else {
     throw new ApiError(403, "User cannot send notifications");
   }
@@ -68,7 +72,11 @@ export const notifyAssignee = asyncHandler(async (req, res) => {
     `,
   });
 
-  task.history.push({ action: "NOTIFIED", by: req.user.id, meta: { to: assignee.email } });
+  task.history.push({
+    action: "NOTIFIED",
+    by: req.user.id,
+    meta: { to: assignee.email },
+  });
   await task.save();
 
   res.json({ notified: true });

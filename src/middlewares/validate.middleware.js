@@ -19,8 +19,8 @@ export function validate(schema) {
         new ApiError(
           400,
           "Validation error",
-          error.details.map((d) => d.message)
-        )
+          error.details.map((d) => d.message),
+        ),
       );
     }
 

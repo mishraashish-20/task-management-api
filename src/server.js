@@ -8,14 +8,11 @@ import { syncMySQLModels } from "./db/mysql.sync.js";
 
 import "dotenv/config";
 
-
-
 async function bootstrap() {
   await connectMySQL();
   await syncMySQLModels();
   await seedAdminIfNeeded();
-  await seedManagerIfNeeded()
-
+  await seedManagerIfNeeded();
 
   await connectMongo();
 

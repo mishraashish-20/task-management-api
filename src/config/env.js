@@ -30,6 +30,12 @@ export const env = {
   },
 };
 
-const required = ["jwtSecret", "mongoUri", "smtp.host", "smtp.user", "smtp.pass"];
+const required = [
+  "jwtSecret",
+  "mongoUri",
+  "smtp.host",
+  "smtp.user",
+  "smtp.pass",
+];
 if (!env.jwtSecret) throw new Error("Missing env: JWT_SECRET");
 if (!env.mongoUri) throw new Error("Missing env: MONGO_URI");

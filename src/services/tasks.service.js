@@ -22,7 +22,10 @@ export async function getTasksForUser(authUser) {
   return Task.find({ assignedTo: authUser.id }).sort({ createdAt: -1 });
 }
 
-export async function createTask(authUser, { title, description, status, assignedTo }) {
+export async function createTask(
+  authUser,
+  { title, description, status, assignedTo },
+) {
   if (!["ADMIN", "MANAGER"].includes(authUser.role)) {
     throw new ApiError(403, "Only Admin/Manager can create tasks");
   }
@@ -42,7 +45,9 @@ export async function createTask(authUser, { title, description, status, assigne
     status,
     assignedTo,
     createdBy: authUser.id,
-    history: [{ action: "CREATED", by: authUser.id, meta: { assignedTo, status } }],
+    history: [
+      { action: "CREATED", by: authUser.id, meta: { assignedTo, status } },
+    ],
   });
 
   return task;
@@ -101,13 +106,22 @@ export async function addAttachments(authUser, id, filePaths) {
 
   if (authUser.role === "ADMIN") {
   } else if (authUser.role === "MANAGER") {
-    if (task.createdBy !== authUser.id) throw new ApiError(403, "Manager can upload only on tasks created by them");
+    if (task.createdBy !== authUser.id)
+      throw new ApiError(
+        403,
+        "Manager can upload only on tasks created by them",
+      );
   } else {
-    if (task.assignedTo !== authUser.id) throw new ApiError(403, "User can upload only on tasks assigned to them");
+    if (task.assignedTo !== authUser.id)
+      throw new ApiError(403, "User can upload only on tasks assigned to them");
   }
 
   task.attachments.push(...filePaths);
-  task.history.push({ action: "UPLOADED", by: authUser.id, meta: { files: filePaths } });
+  task.history.push({
+    action: "UPLOADED",
+    by: authUser.id,
+    meta: { files: filePaths },
+  });
   await task.save();
 
   return task;

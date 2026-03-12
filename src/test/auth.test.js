@@ -1,5 +1,5 @@
 import request from "supertest";
-import "../test/setup/globalSetup.js"
+import "../test/setup/globalSetup.js";
 import { createApp } from "../app.js";
 
 const app = createApp();

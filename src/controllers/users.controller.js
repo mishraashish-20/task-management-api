@@ -1,5 +1,10 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { createUserAdmin, listUsers, updateUserAdmin, deactivateUser } from "../services/users.service.js";
+import {
+  createUserAdmin,
+  listUsers,
+  updateUserAdmin,
+  deactivateUser,
+} from "../services/users.service.js";
 
 export const createUser = asyncHandler(async (req, res) => {
   const user = await createUserAdmin(req.body);
@@ -25,5 +30,3 @@ export async function deleteUserController(req, res, next) {
     next(err);
   }
 }
-
-

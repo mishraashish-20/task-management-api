@@ -3,7 +3,7 @@ import { sequelize } from "../../db/mysql.js";
 
 export async function connectTestDbs() {
   await sequelize.authenticate();
-  await sequelize.sync({ force: true }); 
+  await sequelize.sync({ force: true });
 
   await mongoose.connect(process.env.MONGO_URI);
 }

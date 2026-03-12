@@ -8,7 +8,7 @@ function mustGet(name) {
 }
 
 export const sequelize = new Sequelize(
-  mustGet("MYSQL_DB"),          
+  mustGet("MYSQL_DB"),
   mustGet("MYSQL_USER"),
   mustGet("MYSQL_PASSWORD"),
   {
@@ -16,7 +16,7 @@ export const sequelize = new Sequelize(
     port: Number(process.env.MYSQL_PORT || 3306),
     dialect: "mysql",
     logging: false,
-  }
+  },
 );
 
 export async function connectMySQL() {

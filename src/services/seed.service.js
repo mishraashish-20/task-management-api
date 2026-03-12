@@ -3,7 +3,8 @@ import { env } from "../config/env.js";
 import { User } from "../models/mysql/User.js";
 
 export async function seedAdminIfNeeded() {
-  const seedEnabled = String(process.env.SEED_ADMIN || "false").toLowerCase() === "true";
+  const seedEnabled =
+    String(process.env.SEED_ADMIN || "false").toLowerCase() === "true";
   if (!seedEnabled) return;
 
   if (env.nodeEnv === "production") {
@@ -15,7 +16,9 @@ export async function seedAdminIfNeeded() {
   const password = process.env.SEED_ADMIN_PASSWORD;
 
   if (!email || !password) {
-    throw new Error("SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD must be set when SEED_ADMIN=true");
+    throw new Error(
+      "SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD must be set when SEED_ADMIN=true",
+    );
   }
 
   const existing = await User.findOne({ where: { email } });
@@ -44,7 +47,8 @@ export async function seedAdminIfNeeded() {
 }
 
 export async function seedManagerIfNeeded() {
-  const seedEnabled = String(process.env.SEED_MANAGER || "false").toLowerCase() === "true";
+  const seedEnabled =
+    String(process.env.SEED_MANAGER || "false").toLowerCase() === "true";
   if (!seedEnabled) return;
 
   if (env.nodeEnv === "production") {
@@ -56,7 +60,9 @@ export async function seedManagerIfNeeded() {
   const password = process.env.SEED_MANAGER_PASSWORD;
 
   if (!email || !password) {
-    throw new Error("SEED_MANAGER_EMAIL and SEED_MANAGER_PASSWORD must be set when SEED_MANAGER=true");
+    throw new Error(
+      "SEED_MANAGER_EMAIL and SEED_MANAGER_PASSWORD must be set when SEED_MANAGER=true",
+    );
   }
 
   const existing = await User.findOne({ where: { email } });
@@ -64,7 +70,9 @@ export async function seedManagerIfNeeded() {
   if (existing) {
     if (existing.role !== "MANAGER") {
       await existing.update({ role: "MANAGER" });
-      console.log(`Seed Manager: Upgraded existing user to MANAGER -> ${email}`);
+      console.log(
+        `Seed Manager: Upgraded existing user to MANAGER -> ${email}`,
+      );
     } else {
       console.log(`Seed Manager: Already exists -> ${email}`);
     }
@@ -78,8 +86,10 @@ export async function seedManagerIfNeeded() {
     email,
     passwordHash,
     role: "MANAGER",
-    managerId: null, 
+    managerId: null,
   });
 
-  console.log(`Seed Manager: Created -> ${manager.email} (password: ${password})`);
+  console.log(
+    `Seed Manager: Created -> ${manager.email} (password: ${password})`,
+  );
 }

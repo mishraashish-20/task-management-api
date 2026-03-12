@@ -11,7 +11,7 @@ export function requireAuth(req, res, next) {
   const token = auth.split(" ")[1];
   try {
     const decoded = verifyJwt(token);
-    req.user = decoded; 
+    req.user = decoded;
     next();
   } catch (e) {
     next(new ApiError(401, "Invalid or expired token"));

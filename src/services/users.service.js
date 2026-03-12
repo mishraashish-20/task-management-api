@@ -17,15 +17,35 @@ export async function createUserAdmin(payload) {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  const user = await User.create({ name, email, passwordHash, role, managerId });
+  const user = await User.create({
+    name,
+    email,
+    passwordHash,
+    role,
+    managerId,
+  });
 
-  return { id: user.id, name: user.name, email: user.email, role: user.role, managerId: user.managerId };
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    managerId: user.managerId,
+  };
 }
 
 export async function listUsers() {
   const users = await User.findAll({
-    attributes: ["id", "name", "email", "role", "managerId", "createdAt", "updatedAt"],
-    where: { isActive: true }
+    attributes: [
+      "id",
+      "name",
+      "email",
+      "role",
+      "managerId",
+      "createdAt",
+      "updatedAt",
+    ],
+    where: { isActive: true },
   });
   return users;
 }
@@ -43,7 +63,13 @@ export async function updateUserAdmin(id, payload) {
 
   await user.update(payload);
 
-  return { id: user.id, name: user.name, email: user.email, role: user.role, managerId: user.managerId };
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    managerId: user.managerId,
+  };
 }
 
 export async function deactivateUser(userId, performedBy) {
@@ -56,8 +82,11 @@ export async function deactivateUser(userId, performedBy) {
   }
 
   if (user.role === "ADMIN") {
-    const admins = await User.count({ where: { role: "ADMIN", isActive: true } });
-    if (admins <= 1) throw new ApiError(400, "Cannot deactivate last active admin");
+    const admins = await User.count({
+      where: { role: "ADMIN", isActive: true },
+    });
+    if (admins <= 1)
+      throw new ApiError(400, "Cannot deactivate last active admin");
   }
 
   await user.update({ isActive: false });
